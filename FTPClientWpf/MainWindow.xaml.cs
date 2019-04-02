@@ -149,8 +149,7 @@ namespace FTPClientWpf
                         files1.Add(n);
                     }
 
-
-
+                    
                     reader1.Close();
                     response1.Close();
 
