@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -25,28 +26,16 @@ namespace FTPClientWpf
         public MainWindow()
         {
             InitializeComponent();
-            var list = ListFiles();
-
-            //Console.WriteLine(item);
-
-
-
-
-
-
-
-            Lb_Directory.ItemsSource = list;
-
-        
-
+            abspath = "";
         }
 
-
+        public List<string> FilesToUpload= new List<string>();
+        public string abspath { get; set; }
 
         public static List<string> ListFiles()
         {
 
-            FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.101:21/");
+            FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.107:21/");
             request.Method = WebRequestMethods.Ftp.ListDirectory;
 
             request.Credentials = new NetworkCredential("test_user", "1234567890");
@@ -73,7 +62,7 @@ namespace FTPClientWpf
         {
 
             // create FtpWebRequest
-            FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.111:21/regex.pdf");
+            FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.107:21/regex.pdf");
             request.Method = WebRequestMethods.Ftp.DownloadFile;
             request.Credentials = new NetworkCredential("test_user", "1234567890");
             //request.EnableSsl = true; // если используется ssl
@@ -99,7 +88,7 @@ namespace FTPClientWpf
 
         private void Btn_Upload_Click(object sender, RoutedEventArgs e)
         {
-            FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.111:21/regex.pdf");
+            FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.107:21/regex.pdf");
             request.Method = WebRequestMethods.Ftp.UploadFile;
             request.Credentials = new NetworkCredential("test_user", "1234567890");
             //request.EnableSsl = true; // если используется ssl
@@ -126,41 +115,98 @@ namespace FTPClientWpf
         private void Lb_Directory_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
 
-            if (Lb_Directory.SelectedItem.ToString() != null)
+            if (Lb_Directory.SelectedIndex != -1)
             {
-                try
+
+                string s = Lb_Directory.SelectedItem.ToString();
+                if (s.Contains(abspath)||s.Contains(abspath.Remove(0, 1)))
                 {
-                    string s = Lb_Directory.SelectedItem.ToString();
-                    FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.101:21/" + $"{s}");
+
+
+                    FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.107:21/" + $"{s}");
 
                     request.Method = WebRequestMethods.Ftp.ListDirectory;
                     request.Credentials = new NetworkCredential("test_user", "1234567890");
-                    FtpWebResponse response1 = (FtpWebResponse)request.GetResponse();
-                    Stream responseStream1 = response1.GetResponseStream();
-                    StreamReader reader1 = new StreamReader(responseStream1);
 
-                    List<string> files1 = new List<string>();
-                    //reader1 = new StreamReader(responseStream1);
-
-
-                    while (!reader1.EndOfStream)
+                    using (FtpWebResponse response1 = (FtpWebResponse)request.GetResponse())
                     {
-                        string n = reader1.ReadLine();
-                        files1.Add(n);
+                        using (Stream responseStream1 = response1.GetResponseStream())
+                        {
+                            using (StreamReader reader1 = new StreamReader(responseStream1))
+                            {
+                                //   Debug.WriteLine(reader1.ReadToEnd());
+
+
+                                var temp = reader1.ReadToEnd().Split('\n', '\r').Where(a => a.Length > 0).ToList();
+                                Lb_Directory.ItemsSource = temp;
+                                abspath += "/" + temp.First().Substring(0, temp.First().LastIndexOf('/'));
+
+                            }
+                        }
                     }
-
-                    
-                    reader1.Close();
-                    response1.Close();
-
-                    Lb_Directory.ItemsSource = files1;
                 }
-                catch (Exception)
-                {
+          
+            else
+            {
+                    s = abspath.Substring(0, abspath.LastIndexOf('/'))+"/" + s;
+                    FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.107:21/" + $"{s}");
 
+                    request.Method = WebRequestMethods.Ftp.ListDirectory;
+                    request.Credentials = new NetworkCredential("test_user", "1234567890");
+
+                    using (FtpWebResponse response1 = (FtpWebResponse)request.GetResponse())
+                    {
+                        using (Stream responseStream1 = response1.GetResponseStream())
+                        {
+                            using (StreamReader reader1 = new StreamReader(responseStream1))
+                            {
+                                //   Debug.WriteLine(reader1.ReadToEnd());
+
+
+                                var temp = reader1.ReadToEnd().Split('\n', '\r').Where(a => a.Length > 0).ToList();
+                                Lb_Directory.ItemsSource = temp;
+                                abspath += "/" + temp.First().Substring(0, temp.First().LastIndexOf('/'));
+
+                            }
+                        }
+                    }
                 }
             }
-           // return files1;
+
+            // return files1;
+        }
+
+        private void Btn_connect_Click(object sender, RoutedEventArgs e)
+        {
+            var list = ListFiles();
+            Lb_Directory.ItemsSource = list;
+        }
+
+        private void Btn_back_Click(object sender, RoutedEventArgs e)
+        {
+            //string s = Lb_Directory.SelectedItem.ToString();
+            abspath = abspath.Substring(0, abspath.LastIndexOf('/'));
+            FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.107:21/" +$"{abspath}");
+
+            request.Method = WebRequestMethods.Ftp.ListDirectory;
+            request.Credentials = new NetworkCredential("test_user", "1234567890");
+
+            using (FtpWebResponse response1 = (FtpWebResponse)request.GetResponse())
+            {
+                using (Stream responseStream1 = response1.GetResponseStream())
+                {
+                    using (StreamReader reader1 = new StreamReader(responseStream1))
+                    {
+                        //   Debug.WriteLine(reader1.ReadToEnd());
+
+
+                        var temp = reader1.ReadToEnd().Split('\n', '\r').Where(a => a.Length > 0).ToList();
+                        Lb_Directory.ItemsSource = temp;
+                        //        string abspath = temp.First().Substring(0, temp.First().LastIndexOf('/'));
+
+                    }
+                }
+            }
         }
     }
 }
