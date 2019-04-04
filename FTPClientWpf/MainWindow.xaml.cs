@@ -29,13 +29,13 @@ namespace FTPClientWpf
             abspath = "";
         }
 
-        public List<string> FilesToUpload= new List<string>();
+        public List<string> FilesToUpload = new List<string>();
         public string abspath { get; set; }
 
         public static List<string> ListFiles()
         {
 
-            FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.107:21/");
+            FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.101:21/");
             request.Method = WebRequestMethods.Ftp.ListDirectory;
 
             request.Credentials = new NetworkCredential("test_user", "1234567890");
@@ -60,57 +60,18 @@ namespace FTPClientWpf
 
         private void Btn_Get_Click(object sender, RoutedEventArgs e)
         {
-
-            // create FtpWebRequest
-            FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.107:21/regex.pdf");
-            request.Method = WebRequestMethods.Ftp.DownloadFile;
-            request.Credentials = new NetworkCredential("test_user", "1234567890");
-            //request.EnableSsl = true; // если используется ssl
-
-            // get answer as FtpWebResponse
-            FtpWebResponse response = (FtpWebResponse)request.GetResponse();
-
-            // get stream and save as file 
-            Stream responseStream = response.GetResponseStream();
-            FileStream fs = new FileStream("ph.pdf", FileMode.Create);
-            byte[] buffer = new byte[64];
-            int size = 0;
-
-            while ((size = responseStream.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                fs.Write(buffer, 0, size);
-            }
-            fs.Close();
-            response.Close();
-
-            MessageBox.Show("Saving Complete!");
+            FileStruct fileStruct = new FileStruct();
+            Respoonse("ftp://10.7.180.101:21/",fileStruct);
+            Save("D://Save/", "ftp://10.7.180.101:21/",fileStruct);
+           // Save();
         }
 
         private void Btn_Upload_Click(object sender, RoutedEventArgs e)
         {
-            FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.107:21/regex.pdf");
-            request.Method = WebRequestMethods.Ftp.UploadFile;
-            request.Credentials = new NetworkCredential("test_user", "1234567890");
-            //request.EnableSsl = true; // если используется ssl
 
-            // get answer as FtpWebResponse
-            FtpWebResponse response = (FtpWebResponse)request.GetResponse();
-
-            // get stream and save as file 
-            Stream responseStream = response.GetResponseStream();
-            FileStream fs = new FileStream("ph.pdf", FileMode.Create);
-            byte[] buffer = new byte[64];
-            int size = 0;
-
-            while ((size = responseStream.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                fs.Write(buffer, 0, size);
-            }
-            fs.Close();
-            response.Close();
-
-            MessageBox.Show("Upload Complete!");
+            UploadFtpFile("qwe","temp.txt");
         }
+        
 
         private void Lb_Directory_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -119,11 +80,11 @@ namespace FTPClientWpf
             {
 
                 string s = Lb_Directory.SelectedItem.ToString();
-                if (s.Contains(abspath)||s.Contains(abspath.Remove(0, 1)))
+                if (s.Contains(abspath) || s.Contains(abspath.Remove(0, 1)))
                 {
 
 
-                    FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.107:21/" + $"{s}");
+                    FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.101:21/" + $"{s}");
 
                     request.Method = WebRequestMethods.Ftp.ListDirectory;
                     request.Credentials = new NetworkCredential("test_user", "1234567890");
@@ -140,16 +101,16 @@ namespace FTPClientWpf
                                 var temp = reader1.ReadToEnd().Split('\n', '\r').Where(a => a.Length > 0).ToList();
                                 Lb_Directory.ItemsSource = temp;
                                 abspath += "/" + temp.First().Substring(0, temp.First().LastIndexOf('/'));
-
+                                FilesToUpload.AddRange(temp);
                             }
                         }
                     }
                 }
-          
-            else
-            {
-                    s = abspath.Substring(0, abspath.LastIndexOf('/'))+"/" + s;
-                    FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.107:21/" + $"{s}");
+
+                else
+                {
+                    s = abspath.Substring(0, abspath.LastIndexOf('/')) + "/" + s;
+                    FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.101:21/" + $"{s}");
 
                     request.Method = WebRequestMethods.Ftp.ListDirectory;
                     request.Credentials = new NetworkCredential("test_user", "1234567890");
@@ -166,13 +127,13 @@ namespace FTPClientWpf
                                 var temp = reader1.ReadToEnd().Split('\n', '\r').Where(a => a.Length > 0).ToList();
                                 Lb_Directory.ItemsSource = temp;
                                 abspath += "/" + temp.First().Substring(0, temp.First().LastIndexOf('/'));
-
+                                //add files
+                                FilesToUpload.AddRange(temp);
                             }
                         }
                     }
                 }
             }
-
             // return files1;
         }
 
@@ -186,7 +147,7 @@ namespace FTPClientWpf
         {
             //string s = Lb_Directory.SelectedItem.ToString();
             abspath = abspath.Substring(0, abspath.LastIndexOf('/'));
-            FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.107:21/" +$"{abspath}");
+            FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://10.7.180.101:21/" + $"{abspath}");
 
             request.Method = WebRequestMethods.Ftp.ListDirectory;
             request.Credentials = new NetworkCredential("test_user", "1234567890");
@@ -208,5 +169,156 @@ namespace FTPClientWpf
                 }
             }
         }
+
+
+
+        static public void Respoonse(string Addres, FileStruct FileStr)
+        {
+
+            string temp;
+            FtpWebRequest request = (FtpWebRequest)WebRequest.Create(Addres);
+            request.Method = WebRequestMethods.Ftp.ListDirectoryDetails;
+            request.Credentials = new NetworkCredential("test_user", "1234567890");
+            Console.WriteLine(request.GetResponse());
+
+            FtpWebResponse response = (FtpWebResponse)request.GetResponse();
+
+            Stream responseStream = response.GetResponseStream();
+
+            StreamReader reader = new StreamReader(responseStream);
+
+            string line;
+
+            while ((line = reader.ReadLine()) != null)
+
+            {
+
+                temp = line.Substring(49);
+
+                if (line[0] == 'd')
+
+                {
+
+                    FileStr.Direct.Add(new Direct
+
+                    {
+
+                        Directory = temp,
+
+                        NodeNext = new FileStruct()
+
+                    });
+
+                }
+
+                else
+
+                {
+
+                    FileStr.Files.Add(temp);
+
+                }
+
+            }
+
+            reader.Close();
+
+            response.Close();
+
+            string AddresTemp;
+
+            for (int i = 0; i < FileStr.Direct.Count; i++)
+
+            {
+
+                AddresTemp = "";
+
+                AddresTemp = Addres + "/" + FileStr.Direct[i].Directory;
+
+                Respoonse(AddresTemp, FileStr.Direct[i].NodeNext);
+            }
+        }
+
+
+
+
+
+        static public void Save(string Addres, string AddresSave, FileStruct fileStr)
+
+        {
+
+            for (int i = 0; i < fileStr.Direct.Count; i++)
+
+            {
+
+                Directory.CreateDirectory(Addres + "\\" + fileStr.Direct[i].Directory);
+
+                Save(Addres + "\\" + fileStr.Direct[i].Directory, AddresSave + "/" + fileStr.Direct[i].Directory, fileStr.Direct[i].NodeNext);
+
+            }
+
+            for (int i = 0; i < fileStr.Files.Count; i++)
+
+            {
+
+                FtpWebRequest request = (FtpWebRequest)WebRequest.Create(AddresSave + "/" + fileStr.Files[i]);
+
+                request.Method = WebRequestMethods.Ftp.DownloadFile;
+
+                request.Credentials = new NetworkCredential("test_user", "1234567890");
+                FtpWebResponse response = (FtpWebResponse)request.GetResponse();
+                Stream responseStream = response.GetResponseStream();
+
+                FileStream fs = new FileStream(Addres + "/" + fileStr.Files[i], FileMode.Create);
+
+                byte[] buffer = new byte[64];
+
+                int size = 0;
+                while ((size = responseStream.Read(buffer, 0, buffer.Length)) > 0)
+
+                {
+
+                    fs.Write(buffer, 0, size);
+
+                }
+
+                fs.Close();
+
+                response.Close();
+
+            }
+
+        }
+
+
+        public void UploadFtpFile(string folderName, string fileName)
+        {
+
+            FtpWebRequest request;
+
+           
+            string absoluteFileName = System.IO.Path.GetFileName(fileName);
+
+            request = WebRequest.Create(new Uri(string.Format(@"ftp://{0}/{1}/{2}", "10.7.180.101:21", folderName, absoluteFileName))) as FtpWebRequest;
+            request.Method = WebRequestMethods.Ftp.UploadFile;
+            request.UseBinary = true;
+            request.UsePassive = true;
+            request.KeepAlive = true;
+            request.Credentials = new NetworkCredential("test_user", "1234567890");
+            request.ConnectionGroupName = "group";
+
+            using (FileStream fs = File.OpenRead(fileName))
+            {
+                byte[] buffer = new byte[fs.Length];
+                fs.Read(buffer, 0, buffer.Length);
+                fs.Close();
+                Stream requestStream = request.GetRequestStream();
+                requestStream.Write(buffer, 0, buffer.Length);
+                requestStream.Flush();
+                requestStream.Close();
+            }
+        }
+
     }
 }
+
